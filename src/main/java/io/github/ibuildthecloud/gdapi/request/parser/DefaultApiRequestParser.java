@@ -12,6 +12,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -28,9 +29,13 @@ import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DefaultApiRequestParser implements ApiRequestParser {
 
+    private static final Logger log = LoggerFactory.getLogger(DefaultApiRequestParser.class);
+    
     public static final String DEFAULT_OVERRIDE_URL_HEADER = "X-API-request-url";
     public static final String DEFAULT_OVERRIDE_CLIENT_IP_HEADER = "X-API-client-ip";
     public static final String FORWARDED_FOR_HEADER = "X-Forwarded-For";
@@ -151,6 +156,7 @@ public class DefaultApiRequestParser implements ApiRequestParser {
 
         // Need to handle comma separated hosts in X-Forwarded-For
         String value = request.getHeader(header);
+        log.info("CAJ override: " +  header + " : " + value);
         if (value != null) {
             String[] ips = StringUtils.split(value, ",");
             if (ips.length > 0) {
@@ -170,10 +176,29 @@ public class DefaultApiRequestParser implements ApiRequestParser {
     }
 
     protected String parseRequestUrl(ApiRequest apiRequest, HttpServletRequest request) {
+        log.info("CAJ HEADERS: ");
+        if (request.getHeaderNames() != null) {
+            Enumeration<String> headerNames = request.getHeaderNames();
+            while (headerNames.hasMoreElements()) {
+                String headerName = headerNames.nextElement();
+                StringBuilder buffer = new StringBuilder("CAJ: ").append(headerName);
+                Enumeration<String> headers = request.getHeaders(headerName);
+                while (headers.hasMoreElements()) {
+                    buffer.append(" : ").append(headers.nextElement());
+                }
+                log.info(buffer.toString());
+            }
+
+            Enumeration<?> attrs =  request.getAttributeNames();
+            while(attrs.hasMoreElements()) {
+                log.info("CAJ: " + attrs.nextElement());
+            }
+        }
         if (isAllowXForwardedHost()) {
             String xForwardedProto = getOverrideHeader(request, FORWARDED_PROTO_HEADER, null, false);
             String xForwardedHost = getOverrideHeader(request, FORWARDED_HOST_HEADER, null, false);
             String xForwardedPort = getOverrideHeader(request, FORWARDED_PORT_HEADER, null, false);
+            log.info("CAJ praseReqeustURL: " +  xForwardedProto + " : " + xForwardedHost + " : " + xForwardedPort);
             if (StringUtils.isNotEmpty(xForwardedProto) && StringUtils.isNotEmpty(xForwardedHost)) {
                 try {
                     StringBuilder buffer = new StringBuilder(xForwardedProto).append("://").append(xForwardedHost);
@@ -186,6 +211,8 @@ public class DefaultApiRequestParser implements ApiRequestParser {
                     throw new IllegalStateException(e);
                 }
             }
+        } else {
+            log.info("CAJ NOPE");
         }
 
         String requestUrl = null;
