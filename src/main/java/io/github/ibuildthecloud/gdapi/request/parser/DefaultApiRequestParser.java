@@ -186,12 +186,7 @@ public class DefaultApiRequestParser implements ApiRequestParser {
                 while (headers.hasMoreElements()) {
                     buffer.append(" : ").append(headers.nextElement());
                 }
-                log.info(buffer.toString());
-            }
-
-            Enumeration<?> attrs =  request.getAttributeNames();
-            while(attrs.hasMoreElements()) {
-                log.info("CAJ: " + attrs.nextElement());
+                log.error(buffer.toString());
             }
         }
         if (isAllowXForwardedHost()) {
